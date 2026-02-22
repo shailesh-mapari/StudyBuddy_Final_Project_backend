@@ -54,7 +54,7 @@ const computeDerivedFields = (courseObj) => {
     const lectureOwnMinutes = lecHours * 60 + lecMins;
     const chaptersMinutes = lec.chapters.reduce(
       (s, c) => s + toNumber(c.totalMinutes, 0),
-      0
+      0,
     );
 
     lec.totalMinutes = lectureOwnMinutes + chaptersMinutes;
@@ -93,48 +93,88 @@ const makeImageAbsolute = (rawImage, req) => {
 };
 
 //to get public courses
+// export const getPublicCourses = async (req, res) => {
+//   try {
+//     const { home, type = "all", limit } = req.query;
+//     let filter = {};
+//     if (home === "true") {
+//       filter.courseType = "top";
+//     } else if (type === "top") {
+//       filter.courseType = "top"; // change ===
+//     } else if (type === "regular") {
+//       filter.courseType = "regular";
+//     }
+//     const q = (await Course.find(filter)).sort({ createdAt: -1 });
+//     if (home === "true") {
+//       q.limit(Number(limit));
+//     }
+//     const courses = await q.lean();
+//     const mapped = courses.map((c) => {
+//       const imageUrl = makeImageAbsolute(c.image || "", req);
+//       return {
+//         ...c,
+//         image: imageUrl,
+//       };
+//     });
+//     return res.json({
+//       success: true,
+//       items: mapped,
+//     });
+//   } catch (err) {
+//     console.log("GetPublicCourses error:", err);
+//     return res.status(500).json({
+//       success: false,
+//       error: "Server Error",
+//     });
+//   }
+// };
+
 export const getPublicCourses = async (req, res) => {
   try {
     const { home, type = "all", limit } = req.query;
+
     let filter = {};
     if (home === "true") {
       filter.courseType = "top";
     } else if (type === "top") {
-      filter.courseType === "top";
+      filter.courseType = "top";
     } else if (type === "regular") {
       filter.courseType = "regular";
     }
-    const q = (await Course.find(filter)).toSorted({ createdAt: -1 });
-    if (home === "true") {
-      q.limit(Number(limit));
+
+    let query = Course.find(filter).sort({ createdAt: -1 });
+
+    if (home === "true" && limit) {
+      query = query.limit(Number(limit));
     }
-    const courses = await q.lean();
-    const mapped = courses.map((c) => {
-      const imageUrl = makeImageAbsolute(c.image || "", req);
-      return {
-        ...c,
-        image: imageUrl,
-      };
-    });
-    return res.json({
+
+    const courses = await query.lean();
+
+    const mapped = courses.map((c) => ({
+      ...c,
+      image: makeImageAbsolute(c.image || null, req),
+    }));
+
+    return res.status(200).json({
       success: true,
       items: mapped,
     });
   } catch (err) {
-    console.log("GetPublicCourses error:", err);
+    console.error("GetPublicCourses error:", err);
     return res.status(500).json({
       success: false,
-      error: "Server Error",
+      error: err.message,
     });
   }
 };
+
 //get Courses
 export const getCourses = async (req, res) => {
   try {
-    const courses = (await Course.find()).toSorted({ createdAt: -1 }).lean();
+    const courses = await Course.find().sort({ createdAt: -1 }).lean();
     const mapped = courses.map((c) => ({
       ...c,
-      image: makeImageAbsolute(c.category.image || "", req),
+      image: makeImageAbsolute(c.image || "", req), //chnage today category
     }));
     return res.json({
       success: true,
@@ -271,9 +311,10 @@ export const deleteCourse = async (req, res) => {
     //remove upload files from local uploads folder
     try {
       if (course.image && !course.image.startsWith("http")) {
-        const filePath = path.json(
+        const filePath = path.join(
+          // chnage json
           process.cwd(),
-          course.image.startsWith("/") ? course.image.slice(1) : course.image
+          course.image.startsWith("/") ? course.image.slice(1) : course.image,
         );
 
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
@@ -323,7 +364,7 @@ export const rateCourse = async (req, res) => {
     }
     // Find existing rating by this Clerk userId (ratings store userId as string)
     const idx = (course.ratings || []).findIndex(
-      (r) => String(r.userId) === String(userId)
+      (r) => String(r.userId) === String(userId),
     );
 
     if (idx >= 0) {

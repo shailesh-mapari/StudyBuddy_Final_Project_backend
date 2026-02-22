@@ -6,9 +6,9 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
-      index: trusted,
+      index: true,
     },
-    clearkUserId: {
+    clerkUserId: {
       type: String,
       required: true,
       index: true,
@@ -55,7 +55,7 @@ const bookingSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 const Booking =
   mongoose.models.Booking || mongoose.model("Booking", bookingSchema);

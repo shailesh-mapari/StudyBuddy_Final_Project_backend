@@ -11,10 +11,20 @@ const port = 4000;
 //MIDDLEWARES
 
 // app.use(cors());
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "http://localhost:5174"],
+    credentials: true,
+  }),
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(clerkMiddleware());
+// app.use(clerkMiddleware());
+app.use(
+  clerkMiddleware({
+    secretKey: process.env.CLERK_SECRET_KEY,
+  }),
+);
 app.use("/uploads", express.static("uploads"));
 
 //DB
